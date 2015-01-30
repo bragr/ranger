@@ -21,6 +21,11 @@ if ngx.var.ignore_querystring and ngx.var.ignore_querystring ~= "" and ngx.var.i
 	ignore_querystring = true
 end
 
+local prefix_uri = ''
+if ngx.var.prefix_uri then
+	prefix_uri = ngx.var.prefix_uri
+end
+
 local bypass_headers = { 
 	["Expires"] = "Expires",
 	["Content-Type"] = "Content-Type",
@@ -76,8 +81,12 @@ local host = ngx.var.host
 local is_purge = false
 local matches, err = match(headuri, "^/purge(/.*)")
 if matches then
-	headuri = matches[1]
+	headuri = prefix_uri .. matches[1]
+	uri = prefix_uri .. "/purge" .. matches[1]
 	is_purge = true
+else
+	headuri = prefix_uri ..headuri
+	uri = prefix_uri .. uri
 end
 
 -- try reading values from dict, if not issue a HEAD request and save the value
@@ -310,8 +319,6 @@ for block_range_start = block_start, stop, block_size do
 --	if body then
 --		ngx.print(sub(body, (content_start + 1), content_stop)) -- lua count from 1
 --	end
-	httpc:close()
-	httpchead:close()
         if headers["X-Cache"] then
 		if ngx.re.match(headers["X-Cache"],"HIT") then
 			chunk_map:set(block_id)
@@ -325,6 +332,8 @@ for block_range_start = block_start, stop, block_size do
                 chunk_map:clear(block_id)
         end
 end
+httpc:close()
+httpchead:close()
 chunk_dict:set(headuri,cjson.encode(chunk_map.nums))
 ngx.eof()
 return ngx.exit(ngx.status)
