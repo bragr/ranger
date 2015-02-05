@@ -156,6 +156,13 @@ for header, value in pairs(origin_headers) do
 end
 
 local cl = origin_headers["Content-Length"]
+
+-- Check if the request is out of bounds and send 416 if it is
+if tonumber(start) >= tonumber(cl) then
+    ngx.status = 416
+    ngx.exit(ngx.status)
+end
+
 ngx.header["Content-Length"] = (stop - (start - 1))
 if range_header then
         ngx.header["Content-Range"] = "bytes " .. start .. "-" .. stop .. "/" .. cl
